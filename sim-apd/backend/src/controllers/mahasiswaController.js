@@ -135,9 +135,9 @@ const importMahasiswa = async (req, res) => {
       const [existing] = await db.query('SELECT id FROM mahasiswa WHERE nim = ?', [nim]);
       if (existing.length > 0) continue; // Skip duplicate
 
-      // Hash password (default: nim)
+      // Hash password (default: "password")
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(nim.toString(), salt);
+      const hashedPassword = await bcrypt.hash('password', salt);
 
       // Check wajib_apd from divisi
       let wajib_apd = true;
