@@ -6,5 +6,6 @@ const publicController = require('../controllers/publicController');
 router.get('/check-nim/:nim', publicController.checkNim);
 router.post('/submit-form', publicController.submitForm);
 router.get('/apd-stok', publicController.getApdStok); // Untuk load pilihan APD di form
+router.get('/test-smtp', publicController.testSmtp);
 
 module.exports = router;

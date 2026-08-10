@@ -211,8 +211,33 @@ const submitForm = async (req, res) => {
   }
 };
 
+const testSmtp = async (req, res) => {
+  try {
+    const toEmail = req.query.to || process.env.SMTP_EMAIL;
+    if (!toEmail) {
+      return jsonError(res, 'Missing to email in query parameters and SMTP_EMAIL in env.', 400);
+    }
+    const mailOptions = {
+      from: `"SIM APD Test" <${process.env.SMTP_EMAIL}>`,
+      to: toEmail,
+      subject: 'SIM APD SMTP Diagnostic Test',
+      text: 'If you receive this, SMTP is working perfectly on Vercel!'
+    };
+    await transporter.sendMail(mailOptions);
+    return jsonSuccess(res, null, `Test email sent successfully to ${toEmail}`);
+  } catch (error) {
+    console.error('SMTP Diagnostic Error:', error);
+    return jsonError(res, {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    }, 'SMTP Diagnostic Failed', 500);
+  }
+};
+
 module.exports = {
   checkNim,
   getApdStok,
-  submitForm
+  submitForm,
+  testSmtp
 };
