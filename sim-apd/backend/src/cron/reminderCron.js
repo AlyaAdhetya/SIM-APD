@@ -2,8 +2,13 @@ const cron = require('node-cron');
 const db = require('../config/database');
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
+// Transporter dibuat di dalam callback cron agar env var dibaca saat runtime,
+// dan menggunakan konfigurasi eksplisit + family:4 untuk memaksa IPv4
+const createCronTransporter = () => nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  family: 4,
   auth: {
     user: process.env.SMTP_EMAIL,
     pass: process.env.SMTP_PASS
@@ -87,10 +92,10 @@ function initCron() {
         };
 
         try {
-          await transporter.sendMail(mailOptions);
+          await createCronTransporter().sendMail(mailOptions);
           console.log(`[CRON] Berhasil mengirim email pengingat ke ${row.email} (${row.nama})`);
         } catch (emailErr) {
-          console.error(`[CRON] Gagal mengirim email ke ${row.email}:`, emailErr);
+          console.error(`[CRON] Gagal mengirim email ke ${row.email}:`, emailErr.code, emailErr.message);
         }
       }
     } catch (error) {

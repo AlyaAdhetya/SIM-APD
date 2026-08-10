@@ -256,9 +256,13 @@ const sendReminderPeminjaman = async (req, res) => {
       `
     };
 
-    // Buat transporter di dalam fungsi agar env var dibaca saat request (penting di Vercel serverless)
+    // Buat transporter di dalam fungsi agar env var dibaca saat request.
+    // Gunakan konfigurasi eksplisit + family:4 agar selalu pakai IPv4 (Vercel tidak support IPv6 outbound)
     const reminderTransporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      family: 4,
       auth: {
         user: process.env.SMTP_EMAIL,
         pass: process.env.SMTP_PASS
@@ -270,8 +274,12 @@ const sendReminderPeminjaman = async (req, res) => {
   } catch (error) {
     console.error('sendReminder error code:', error.code);
     console.error('sendReminder error message:', error.message);
-    console.error('sendReminder full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    return jsonError(res, `[DEBUG] code=${error.code || 'N/A'} | ${error.message || 'Terjadi kesalahan pada server.'}`, 500);
+    const detail = error.code === 'EAUTH'
+      ? 'Kredensial Gmail salah atau App Password tidak valid.'
+      : error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || error.code === 'ECONNECTION'
+      ? 'Koneksi ke server Gmail gagal. Pastikan konfigurasi SMTP benar.'
+      : error.message || 'Terjadi kesalahan pada server.';
+    return jsonError(res, detail, 500);
   }
 };
 

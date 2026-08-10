@@ -3,9 +3,13 @@ const { jsonSuccess, jsonError } = require('../helpers/response');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Buat transporter secara lazy di dalam fungsi agar env var terbaca saat request
+// Buat transporter secara lazy di dalam fungsi agar env var terbaca saat request.
+// Gunakan konfigurasi eksplisit + family:4 agar selalu pakai IPv4 (Vercel tidak support IPv6 outbound)
 const createTransporter = () => nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  family: 4,
   auth: {
     user: process.env.SMTP_EMAIL,
     pass: process.env.SMTP_PASS
