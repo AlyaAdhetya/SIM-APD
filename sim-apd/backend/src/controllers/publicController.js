@@ -4,12 +4,9 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 // Buat transporter secara lazy di dalam fungsi agar env var terbaca saat request.
-// Port 465 + SSL + family:4 (IPv4) — Vercel memblokir port 587, hanya 465 yang bisa
+// service:'gmail' terbukti bekerja di Vercel (port 465 SSL otomatis, tanpa paksa family)
 const createTransporter = () => nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
+  service: 'gmail',
   auth: {
     user: process.env.SMTP_EMAIL,
     pass: process.env.SMTP_PASS
@@ -274,7 +271,7 @@ const testSmtp = async (req, res) => {
       subject: 'SIM APD SMTP Diagnostic Test',
       text: 'If you receive this, SMTP is working perfectly on Vercel!'
     };
-    await transporter.sendMail(mailOptions);
+    await createTransporter().sendMail(mailOptions);
     return jsonSuccess(res, null, `Test email sent successfully to ${toEmail}`);
   } catch (error) {
     console.error('SMTP Diagnostic Error:', error);

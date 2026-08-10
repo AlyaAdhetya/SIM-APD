@@ -256,13 +256,10 @@ const sendReminderPeminjaman = async (req, res) => {
       `
     };
 
-    // Buat transporter di dalam fungsi agar env var dibaca saat request.
-    // Port 465 + SSL + family:4 (IPv4) — Vercel memblokir port 587, hanya 465 yang bisa
+    // Buat transporter di dalam fungsi agar env var dibaca saat request (lazy init).
+    // service:'gmail' terbukti bekerja di Vercel saat test-smtp sukses
     const reminderTransporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      family: 4,
+      service: 'gmail',
       auth: {
         user: process.env.SMTP_EMAIL,
         pass: process.env.SMTP_PASS

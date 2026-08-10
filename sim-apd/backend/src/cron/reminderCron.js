@@ -2,12 +2,9 @@ const cron = require('node-cron');
 const db = require('../config/database');
 const nodemailer = require('nodemailer');
 
-// Port 465 + SSL + family:4 (IPv4) — Vercel memblokir port 587, hanya 465 yang bisa
+// service:'gmail' terbukti bekerja di Vercel. Transporter dibuat per-request (lazy)
 const createCronTransporter = () => nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
+  service: 'gmail',
   auth: {
     user: process.env.SMTP_EMAIL,
     pass: process.env.SMTP_PASS
