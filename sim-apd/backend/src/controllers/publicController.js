@@ -170,28 +170,33 @@ const submitForm = async (req, res) => {
 
     // Kirim Email Pemberitahuan
     try {
-      const mailOptions = {
-        from: `"SIM APD RU III" <${process.env.SMTP_EMAIL}>`,
-        to: email,
-        subject: 'Bukti Pengajuan Peminjaman APD',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #16a34a; text-align: center;">Pengajuan Berhasil</h2>
-            <p>Halo <strong>${mhs.nama}</strong>,</p>
-            <p>Terima kasih, form pengajuan peminjaman APD Anda telah berhasil direkam dalam sistem.</p>
-            <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0;">
-              <p style="margin: 0; color: #64748b; font-size: 14px;">KODE REFERENSI</p>
-              <h3 style="margin: 8px 0 0; color: #0f172a; font-size: 24px;">${kodeReferensi}</h3>
+      if (process.env.SMTP_EMAIL && process.env.SMTP_PASS) {
+        const mailOptions = {
+          from: `"SIM APD RU III" <${process.env.SMTP_EMAIL}>`,
+          to: email,
+          subject: 'Bukti Pengajuan Peminjaman APD',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+              <h2 style="color: #16a34a; text-align: center;">Pengajuan Berhasil</h2>
+              <p>Halo <strong>${mhs.nama}</strong>,</p>
+              <p>Terima kasih, form pengajuan peminjaman APD Anda telah berhasil direkam dalam sistem.</p>
+              <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0;">
+                <p style="margin: 0; color: #64748b; font-size: 14px;">KODE REFERENSI</p>
+                <h3 style="margin: 8px 0 0; color: #0f172a; font-size: 24px;">${kodeReferensi}</h3>
+              </div>
+              <p>Silakan tunjukkan kode referensi ini kepada staff HC untuk proses pengambilan APD Anda.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+              <p style="font-size: 12px; color: #94a3b8; text-align: center;">Email ini dikirim secara otomatis oleh Sistem Informasi Manajemen APD - PT Pertamina RU III.</p>
             </div>
-            <p>Silakan tunjukkan kode referensi ini kepada staff HC untuk proses pengambilan APD Anda.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">Email ini dikirim secara otomatis oleh Sistem Informasi Manajemen APD - PT Pertamina RU III.</p>
-          </div>
-        `
-      };
-      transporter.sendMail(mailOptions).catch(e => console.error('Gagal kirim email di background:', e));
+          `
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Email bukti peminjaman berhasil dikirim ke ${email}`);
+      } else {
+        console.warn('Konfigurasi SMTP_EMAIL atau SMTP_PASS belum diatur di env. Email bukti peminjaman tidak dikirim.');
+      }
     } catch (mailError) {
-      console.error('Gagal inisiasi kirim email:', mailError);
+      console.error('Gagal mengirim email bukti peminjaman:', mailError);
     }
 
     return jsonSuccess(res, { kode_referensi: kodeReferensi }, 'Form peminjaman berhasil disubmit.');
