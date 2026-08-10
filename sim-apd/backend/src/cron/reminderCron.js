@@ -2,12 +2,11 @@ const cron = require('node-cron');
 const db = require('../config/database');
 const nodemailer = require('nodemailer');
 
-// Transporter dibuat di dalam callback cron agar env var dibaca saat runtime,
-// dan menggunakan konfigurasi eksplisit + family:4 untuk memaksa IPv4
+// Port 465 + SSL + family:4 (IPv4) — Vercel memblokir port 587, hanya 465 yang bisa
 const createCronTransporter = () => nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   family: 4,
   auth: {
     user: process.env.SMTP_EMAIL,

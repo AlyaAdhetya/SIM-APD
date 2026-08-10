@@ -2,11 +2,11 @@ const nodemailer = require('nodemailer');
 const { jsonSuccess, jsonError } = require('../helpers/response');
 
 // Konfigurasi Transporter Nodemailer (Membutuhkan kredensial di .env)
-// Gunakan konfigurasi eksplisit + family:4 agar selalu pakai IPv4 (Vercel tidak support IPv6 outbound)
+// Port 465 + SSL + family:4 (IPv4) — Vercel memblokir port 587, hanya 465 yang bisa
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   family: 4,
   auth: {
     user: process.env.SMTP_EMAIL || 'dummy@gmail.com',
