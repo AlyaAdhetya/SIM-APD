@@ -3,7 +3,8 @@ import axios from 'axios';
 import { Search, CheckCircle, AlertCircle, ShoppingBag, Send, RefreshCw, HardHat, Glasses, Shirt, HandMetal, Footprints, Shield, ChevronDown, Loader2 } from 'lucide-react';
 import './App.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
 function App() {
   // Form State
