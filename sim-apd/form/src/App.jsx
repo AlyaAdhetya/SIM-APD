@@ -4,7 +4,8 @@ import { Search, CheckCircle, AlertCircle, ShoppingBag, Send, RefreshCw, HardHat
 import './App.css';
 
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const API_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+const cleanRawUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
+const API_URL = cleanRawUrl.endsWith('/api') ? cleanRawUrl : `${cleanRawUrl}/api`;
 
 function App() {
   // Form State
