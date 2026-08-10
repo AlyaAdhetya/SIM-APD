@@ -6,21 +6,17 @@ import { LoadingPage } from './Loading';
  * allowedUserType: 'mahasiswa' | 'staff'
  * allowedRoles: ['hc'] | ['hsse'] | undefined (semua role staff boleh)
  */
-export default function ProtectedRoute({ children, allowedUserType, allowedRoles }) {
-  const { user, userType, role, loading } = useAuth();
+export default function ProtectedRoute({ children, allowedRoles }) {
+  const { user, role, loading } = useAuth();
 
   if (loading) return <LoadingPage label="Memeriksa sesi login..." />;
 
   if (!user) {
-    return <Navigate to={allowedUserType === 'mahasiswa' ? '/login' : '/staff/login'} replace />;
-  }
-  if (allowedUserType && userType !== allowedUserType) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
   if (allowedRoles && !allowedRoles.includes(role)) {
     return <Navigate to="/" replace />;
   }
-
 
   return children;
 }

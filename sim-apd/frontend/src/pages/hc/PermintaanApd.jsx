@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import StaffLayout from '../../components/StaffLayout';
-import StatusBadge from '../../components/StatusBadge';
-import EmptyState from '../../components/EmptyState';
 import { LoadingPage, ButtonSpinner } from '../../components/Loading';
 import { listApd } from '../../api/apd';
-import { createPermintaan, listPermintaan } from '../../api/permintaan';
+import { sendRestockEmail } from '../../api/email';
+import { Mail } from 'lucide-react';
 import { apiErrorMessage } from '../../api/client';
 
 export default function PermintaanApdHc() {
-  const navigate = useNavigate();
   const [apdList, setApdList] = useState(null);
   const [jumlahMap, setJumlahMap] = useState({}); // { [apd_stok_id]: jumlah }
   const [catatan, setCatatan] = useState('');
+  const [targetEmail, setTargetEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -21,45 +19,75 @@ export default function PermintaanApdHc() {
     listApd().then((res) => setApdList(res.data)).catch(() => setError('Gagal memuat data APD.'));
   }, []);
 
-  async function handleSubmit() {
+  async function handleSendEmail() {
+    if (!targetEmail) {
+      setError('Harap isi alamat email tujuan (HSSE).');
+      return;
+    }
+
     const items = Object.entries(jumlahMap)
       .filter(([, jumlah]) => jumlah && Number(jumlah) > 0)
-      .map(([stokId, jumlah]) => ({ apd_stok_id: stokId, jumlah_diminta: Number(jumlah) }));
+      .map(([stokId, jumlah]) => {
+        let itemName = '';
+        let itemSize = '';
+        apdList.forEach(jenis => {
+          const u = jenis.ukuran.find(uk => uk.apd_stok_id === parseInt(stokId));
+          if (u) {
+            itemName = jenis.nama_apd;
+            itemSize = u.ukuran;
+          }
+        });
+        return {
+          nama: itemName,
+          ukuran: itemSize,
+          jumlah: Number(jumlah)
+        };
+      });
 
     if (items.length === 0) {
       setError('Isi jumlah minimal satu jenis/ukuran APD yang diminta.');
       return;
     }
+
     setSubmitting(true);
     setError('');
     setSuccess('');
+
     try {
-      await createPermintaan(items, catatan);
+      await sendRestockEmail(targetEmail, items, catatan);
       setJumlahMap({});
       setCatatan('');
-      setSuccess('Permintaan APD berhasil dikirim ke HSSE.');
+      setTargetEmail('');
+      setSuccess('Email permintaan restock berhasil dikirim ke HSSE.');
     } catch (err) {
-      setError(apiErrorMessage(err, 'Gagal mengirim permintaan APD.'));
+      setError(apiErrorMessage(err, 'Gagal mengirim email restock. Pastikan konfigurasi SMTP di backend sudah diatur.'));
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!apdList && !error) return <StaffLayout title="Permintaan APD"><LoadingPage /></StaffLayout>;
+  if (!apdList && !error) return <StaffLayout title="Permintaan Restock"><LoadingPage /></StaffLayout>;
 
   return (
-    <StaffLayout title="Permintaan APD ke HSSE" subtitle="Ajukan restock saat stok menipis">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button className="btn btn-outline" onClick={() => navigate('/hc/riwayat-permintaan')}>
-          Lihat Riwayat Permintaan
-        </button>
-      </div>
-
+    <StaffLayout title="Permintaan Restock (Email)" subtitle="Kirim email otomatis ke HSSE untuk meminta restock APD">
       {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
+      {success && <div className="alert alert-success fade-in">{success}</div>}
 
       <div className="card">
-        <div className="card-title">Buat Permintaan Baru</div>
+        <div className="card-title">Form Permintaan Restock</div>
+        
+        <div className="field" style={{ marginBottom: 20 }}>
+          <label>Alamat Email Tujuan (HSSE) <span style={{ color: 'var(--red-600)' }}>*</span></label>
+          <input 
+            type="email" 
+            className="input" 
+            value={targetEmail} 
+            onChange={(e) => setTargetEmail(e.target.value)}
+            placeholder="hsse.ru3@pertamina.com" 
+            required
+          />
+        </div>
+
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -108,13 +136,13 @@ export default function PermintaanApdHc() {
         </div>
 
         <div className="field" style={{ marginTop: 14 }}>
-          <label>Catatan untuk HSSE (opsional)</label>
+          <label>Catatan Tambahan (opsional)</label>
           <textarea className="input" rows={2} value={catatan} onChange={(e) => setCatatan(e.target.value)}
             placeholder="Contoh: Stok wearpack L menipis karena gelombang magang baru" />
         </div>
 
-        <button className="btn btn-accent" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? <ButtonSpinner /> : 'Kirim Permintaan ke HSSE'}
+        <button className="btn btn-primary" onClick={handleSendEmail} disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
+          {submitting ? <ButtonSpinner /> : <><Mail size={18} /> Kirim Email Restock</>}
         </button>
       </div>
 

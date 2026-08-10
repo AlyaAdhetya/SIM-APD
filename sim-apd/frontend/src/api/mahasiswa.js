@@ -23,3 +23,6 @@ export const updateMahasiswa = (id, data) =>
 
 export const deleteMahasiswa = (id) =>
   client.delete(`/api/mahasiswa/delete/${id}`).then((r) => r.data);
+
+export const deleteAllMahasiswa = () =>
+  client.delete('/api/mahasiswa/delete_all').then((r) => r.data);

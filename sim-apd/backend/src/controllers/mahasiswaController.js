@@ -1,19 +1,27 @@
 const db = require('../config/database');
 const { jsonSuccess, jsonError } = require('../helpers/response');
 const xlsx = require('xlsx');
-const bcrypt = require('bcryptjs');
 
 // GET /api/mahasiswa/list
 const getListMahasiswa = async (req, res) => {
   try {
-    // Otomatis set status 'selesai' untuk mahasiswa yang tgl_selesai-nya sudah lewat
-    await db.query(`
-      UPDATE mahasiswa 
-      SET status = 'selesai' 
-      WHERE tgl_selesai < CURRENT_DATE AND status = 'aktif'
-    `);
+    const { status } = req.query;
+    let query = `
+      SELECT m.id, m.nim, m.nama, m.universitas, m.divisi_id,
+             d.nama_divisi AS divisi, m.wajib_apd,
+             m.tgl_mulai, m.tgl_selesai, m.status, m.created_at
+      FROM mahasiswa m
+      LEFT JOIN divisi_apd d ON m.divisi_id = d.id
+    `;
+    const params = [];
 
-    const [rows] = await db.query('SELECT id, nim, nama, universitas, divisi, wajib_apd, tgl_mulai, tgl_selesai, status, created_at FROM mahasiswa ORDER BY created_at DESC');
+    if (status && ['aktif', 'selesai'].includes(status)) {
+      query += ' WHERE m.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY m.created_at DESC';
+    const [rows] = await db.query(query, params);
     return jsonSuccess(res, rows, 'Berhasil mengambil data mahasiswa.');
   } catch (error) {
     console.error(error);
@@ -24,9 +32,9 @@ const getListMahasiswa = async (req, res) => {
 // PUT /api/mahasiswa/update_status/:id
 const updateStatus = async (req, res) => {
   try {
-    const { id, status } = req.body; // 'aktif', 'selesai', 'nonaktif'
+    const { id, status } = req.body; // 'aktif', 'selesai'
 
-    if (!['aktif', 'selesai', 'nonaktif'].includes(status)) {
+    if (!['aktif', 'selesai'].includes(status)) {
       return jsonError(res, 'Status tidak valid.', 400);
     }
 
@@ -42,7 +50,7 @@ const updateStatus = async (req, res) => {
 const updateMahasiswa = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nim, nama, universitas, divisi, wajib_apd, tgl_mulai, tgl_selesai } = req.body;
+    const { nim, nama, universitas, divisi_id, wajib_apd, tgl_mulai, tgl_selesai } = req.body;
 
     if (!nim || !nama) {
       return jsonError(res, 'NIM dan Nama wajib diisi.', 400);
@@ -53,8 +61,8 @@ const updateMahasiswa = async (req, res) => {
     if (existing.length > 0) return jsonError(res, 'NIM sudah terdaftar pada data lain.', 400);
 
     await db.query(
-      'UPDATE mahasiswa SET nim = ?, nama = ?, universitas = ?, divisi = ?, wajib_apd = ?, tgl_mulai = ?, tgl_selesai = ? WHERE id = ?',
-      [nim, nama, universitas || null, divisi || null, wajib_apd, tgl_mulai || null, tgl_selesai || null, id]
+      'UPDATE mahasiswa SET nim = ?, nama = ?, universitas = ?, divisi_id = ?, wajib_apd = ?, tgl_mulai = ?, tgl_selesai = ? WHERE id = ?',
+      [nim, nama, universitas || null, divisi_id || null, wajib_apd, tgl_mulai || null, tgl_selesai || null, id]
     );
 
     return jsonSuccess(res, null, 'Data mahasiswa berhasil diperbarui.');
@@ -70,6 +78,17 @@ const deleteMahasiswa = async (req, res) => {
     const { id } = req.params;
     await db.query('DELETE FROM mahasiswa WHERE id = ?', [id]);
     return jsonSuccess(res, null, 'Data mahasiswa berhasil dihapus.');
+  } catch (error) {
+    console.error(error);
+    return jsonError(res, 'Terjadi kesalahan pada server.', 500);
+  }
+};
+
+// DELETE /api/mahasiswa/delete_all
+const deleteAllMahasiswa = async (req, res) => {
+  try {
+    await db.query('DELETE FROM mahasiswa');
+    return jsonSuccess(res, null, 'Semua data mahasiswa berhasil dihapus.');
   } catch (error) {
     console.error(error);
     return jsonError(res, 'Terjadi kesalahan pada server.', 500);
@@ -115,6 +134,9 @@ const importMahasiswa = async (req, res) => {
     const tglMulaiIdx = headers.findIndex(h => h.includes('mulai'));
     const tglSelesaiIdx = headers.findIndex(h => h.includes('selesai') || h.includes('akhir'));
 
+    // Cache semua divisi dari DB untuk performa
+    const [allDivisi] = await db.query('SELECT id, nama_divisi, wajib_apd FROM divisi_apd');
+
     let importedCount = 0;
     
     // Process each row
@@ -125,7 +147,7 @@ const importMahasiswa = async (req, res) => {
       const nim = row[nimIdx];
       const nama = row[namaIdx];
       const universitas = univIdx !== -1 ? row[univIdx] : null;
-      const divisi = divisiIdx !== -1 ? row[divisiIdx] : null;
+      const divisiNama = divisiIdx !== -1 ? row[divisiIdx] : null;
       let tglMulai = tglMulaiIdx !== -1 ? row[tglMulaiIdx] : null;
       let tglSelesai = tglSelesaiIdx !== -1 ? row[tglSelesaiIdx] : null;
 
@@ -135,16 +157,14 @@ const importMahasiswa = async (req, res) => {
       const [existing] = await db.query('SELECT id FROM mahasiswa WHERE nim = ?', [nim]);
       if (existing.length > 0) continue; // Skip duplicate
 
-      // Hash password (default: "password")
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('password', salt);
-
-      // Check wajib_apd from divisi
+      // Cari divisi_id berdasarkan nama_divisi
+      let divisi_id = null;
       let wajib_apd = true;
-      if (divisi) {
-        const [divRow] = await db.query('SELECT wajib_apd FROM divisi_wajib_apd WHERE nama_divisi = ?', [divisi]);
-        if (divRow.length > 0) {
-          wajib_apd = divRow[0].wajib_apd;
+      if (divisiNama) {
+        const divRow = allDivisi.find(d => d.nama_divisi.toLowerCase() === String(divisiNama).toLowerCase().trim());
+        if (divRow) {
+          divisi_id = divRow.id;
+          wajib_apd = divRow.wajib_apd;
         }
       }
 
@@ -168,8 +188,8 @@ const importMahasiswa = async (req, res) => {
       }
 
       await db.query(
-        'INSERT INTO mahasiswa (nim, nama, universitas, divisi, wajib_apd, tgl_mulai, tgl_selesai, password, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [nim, nama, universitas, divisi, wajib_apd, parseDate(tglMulai), parseDate(tglSelesai), hashedPassword, 'aktif']
+        'INSERT INTO mahasiswa (nim, nama, universitas, divisi_id, wajib_apd, tgl_mulai, tgl_selesai, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [nim, nama, universitas, divisi_id, wajib_apd, parseDate(tglMulai), parseDate(tglSelesai), 'aktif']
       );
       importedCount++;
     }
@@ -186,5 +206,6 @@ module.exports = {
   updateStatus,
   updateMahasiswa,
   deleteMahasiswa,
+  deleteAllMahasiswa,
   importMahasiswa
 };

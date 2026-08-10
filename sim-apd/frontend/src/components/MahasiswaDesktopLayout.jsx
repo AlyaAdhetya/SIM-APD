@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { logout as apiLogout } from '../api/auth';
 import { assetUrl } from '../api/client';
 import { 
@@ -8,7 +8,7 @@ import {
   History, 
   User,
   LogOut,
-  Search,
+  Clock,
   Bell,
   Settings,
   Menu
@@ -25,6 +25,19 @@ export default function MahasiswaDesktopLayout({ children, title, subtitle, hide
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = time.toLocaleTimeString('id-ID', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  const formattedDate = time.toLocaleDateString('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
 
   async function handleLogout() {
     try {
@@ -98,9 +111,21 @@ export default function MahasiswaDesktopLayout({ children, title, subtitle, hide
               <Menu size={20} strokeWidth={2.5} />
             </button>
 
-            <div className="topbar-search-group">
-              <Search className="topbar-search-icon" size={18} strokeWidth={2.5} />
-              <input className="topbar-search-input" type="text" placeholder="Cari data..." />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '-12px' }}>
+              <Clock size={24} strokeWidth={2.5} style={{ color: 'var(--primary-color)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ 
+                  fontFamily: 'monospace',
+                  fontSize: '20px', 
+                  fontWeight: '700', 
+                  color: 'var(--text-main)', 
+                  lineHeight: '1.1',
+                  letterSpacing: '0.5px'
+                }}>
+                  {formattedTime}
+                </span>
+                <span style={{ fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: '1.2' }}>{formattedDate}</span>
+              </div>
             </div>
           </div>
 

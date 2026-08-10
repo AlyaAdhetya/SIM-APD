@@ -1,4 +1,5 @@
 import { AlertTriangle, Info, X } from 'lucide-react';
+import { ButtonSpinner } from './Loading';
 
 export default function ConfirmModal({ 
   isOpen, 
@@ -117,7 +118,7 @@ export default function ConfirmModal({
             onMouseOut={(e) => !isLoading && (e.currentTarget.style.background = btnBg)}
           >
             {isLoading ? (
-              <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <ButtonSpinner size={16} />
             ) : confirmText}
           </button>
         </div>

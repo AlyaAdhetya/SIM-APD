@@ -6,10 +6,10 @@ const { requireAuth, requireRole } = require('../middlewares/auth');
 // Public route for viewing lists (or just for logged in users)
 router.get('/list', requireAuth, apdController.getListApd);
 
-// Routes for Staff (HC/HSSE)
-router.post('/jenis_create', requireAuth, requireRole(['hc', 'hsse']), apdController.createJenisApd);
-router.post('/stok_create', requireAuth, requireRole(['hc', 'hsse']), apdController.createStokApd);
-router.post('/stok_update', requireAuth, requireRole(['hc', 'hsse']), apdController.updateStokApd);
-router.post('/nonaktifkan', requireAuth, requireRole(['hc', 'hsse']), apdController.nonaktifkanApd);
+// Routes for Staff (HC)
+router.post('/jenis_create', requireAuth, requireRole(['hc']), apdController.createJenisApd);
+router.post('/stok_create', requireAuth, requireRole(['hc']), apdController.createStokApd);
+router.post('/stok_update', requireAuth, requireRole(['hc']), apdController.updateStokApd);
+router.post('/nonaktifkan', requireAuth, requireRole(['hc']), apdController.nonaktifkanApd);
 
 module.exports = router;

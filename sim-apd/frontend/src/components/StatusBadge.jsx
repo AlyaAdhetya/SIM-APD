@@ -1,9 +1,8 @@
 const STATUS_MAP = {
-  menunggu_verifikasi: { label: 'Menunggu Verifikasi', color: 'amber' },
-  menunggu: { label: 'Menunggu', color: 'amber' },
-  disetujui: { label: 'Disetujui', color: 'blue' },
-  ditolak: { label: 'Ditolak', color: 'red' },
-  selesai: { label: 'Selesai', color: 'green' },
+  menunggu_verifikasi: { label: 'Belum Diambil', color: 'amber' },
+  menunggu: { label: 'Belum Diambil', color: 'amber' },
+  disetujui: { label: 'Aktif', color: 'green' },
+  selesai: { label: 'Selesai', color: 'blue' },
   aktif: { label: 'Aktif', color: 'green' },
   nonaktif: { label: 'Nonaktif', color: 'gray' },
   baik: { label: 'Baik', color: 'green' },

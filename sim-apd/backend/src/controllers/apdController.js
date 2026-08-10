@@ -69,13 +69,13 @@ const createStokApd = async (req, res) => {
   }
 };
 
-// PUT /api/apd/stok_update/:id
-const updateStokApd = async (req, res) => {
+// POST /api/apd/stok_tambah — HC mencatat unit APD yang baru diterima dari HSSE
+const tambahStokApd = async (req, res) => {
   try {
     const { id, stok_tambahan } = req.body;
 
-    if (!stok_tambahan) {
-      return jsonError(res, 'Stok tambahan wajib diisi.', 400);
+    if (!id || !stok_tambahan || Number(stok_tambahan) <= 0) {
+      return jsonError(res, 'ID dan jumlah unit yang diterima wajib diisi.', 400);
     }
 
     await db.query(
@@ -83,11 +83,40 @@ const updateStokApd = async (req, res) => {
       [stok_tambahan, stok_tambahan, id]
     );
 
-    return jsonSuccess(res, null, 'Berhasil memperbarui stok APD.');
+    return jsonSuccess(res, null, 'Stok APD berhasil ditambahkan.');
   } catch (error) {
     console.error(error);
     return jsonError(res, 'Terjadi kesalahan pada server.', 500);
   }
+};
+
+// POST /api/apd/batas_minimum_update — Update threshold peringatan stok rendah
+const updateBatasMinimum = async (req, res) => {
+  try {
+    const { id, batas_minimum } = req.body;
+
+    if (!id || batas_minimum === undefined) {
+      return jsonError(res, 'ID dan batas minimum wajib diisi.', 400);
+    }
+
+    await db.query(
+      'UPDATE apd_stok SET batas_minimum = ? WHERE id = ?',
+      [batas_minimum, id]
+    );
+
+    return jsonSuccess(res, null, 'Batas minimum berhasil diperbarui.');
+  } catch (error) {
+    console.error(error);
+    return jsonError(res, 'Terjadi kesalahan pada server.', 500);
+  }
+};
+
+// Alias lama — backward compat (stok_tambahan atau batas_minimum)
+const updateStokApd = async (req, res) => {
+  const { stok_tambahan, batas_minimum } = req.body;
+  if (stok_tambahan !== undefined) return tambahStokApd(req, res);
+  if (batas_minimum !== undefined) return updateBatasMinimum(req, res);
+  return jsonError(res, 'Tidak ada data yang dapat diperbarui.', 400);
 };
 
 // PUT /api/apd/nonaktifkan/:id
@@ -107,6 +136,8 @@ module.exports = {
   getListApd,
   createJenisApd,
   createStokApd,
+  tambahStokApd,
+  updateBatasMinimum,
   updateStokApd,
   nonaktifkanApd
 };

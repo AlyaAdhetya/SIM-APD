@@ -7,8 +7,8 @@ import ConfirmModal from '../../components/ConfirmModal';
 import StatusBadge from '../../components/StatusBadge';
 import EmptyState from '../../components/EmptyState';
 import { SkeletonTable } from '../../components/Loading';
-import { listMahasiswa, updateStatusMahasiswa, updateMahasiswa, deleteMahasiswa } from '../../api/mahasiswa';
-import { exportToExcel, exportToPdf } from '../../utils/exportHelper';
+import { listMahasiswa, updateStatusMahasiswa, updateMahasiswa, deleteMahasiswa, deleteAllMahasiswa } from '../../api/mahasiswa';
+import { listDivisi } from '../../api/divisi';
 
 export default function DataMahasiswa() {
   const [list, setList] = useState(null);
@@ -20,6 +20,9 @@ export default function DataMahasiswa() {
   const [editData, setEditData] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+  const [divisiList, setDivisiList] = useState([]);
 
   function load() {
     listMahasiswa(filter || undefined)
@@ -27,7 +30,12 @@ export default function DataMahasiswa() {
       .catch(() => setError('Gagal memuat data mahasiswa.'));
   }
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => {
+    load();
+    listDivisi().then((res) => {
+      setDivisiList(res.data || []);
+    }).catch(() => {});
+  }, [filter]);
 
   useEffect(() => {
     setPage(1);
@@ -68,10 +76,12 @@ export default function DataMahasiswa() {
 
   const filteredList = list?.filter((m) => {
     const term = search.toLowerCase();
-    return (
-      (m.nim && m.nim.toLowerCase().includes(term)) ||
-      (m.nama && m.nama.toLowerCase().includes(term))
-    );
+    return (m.nim && m.nim.toLowerCase().includes(term)) ||
+           (m.nama && m.nama.toLowerCase().includes(term));
+  }).sort((a, b) => {
+    const nameA = a.nama || '';
+    const nameB = b.nama || '';
+    return nameA.localeCompare(nameB);
   });
 
   const startIndex = (page - 1) * limit;
@@ -92,36 +102,17 @@ export default function DataMahasiswa() {
     return pages;
   };
 
-  function handleExportExcel() {
-    if (!filteredList || filteredList.length === 0) return;
-    const headers = ['NIM', 'Nama', 'Universitas', 'Divisi', 'Wajib APD', 'Tgl Mulai', 'Tgl Selesai', 'Status'];
-    const data = filteredList.map(m => [
-      m.nim,
-      m.nama,
-      m.universitas || '-',
-      m.divisi || '-',
-      m.wajib_apd ? 'Ya' : 'Tidak',
-      m.tgl_mulai || '-',
-      m.tgl_selesai || '-',
-      m.status.toUpperCase()
-    ]);
-    exportToExcel(headers, data, 'Laporan_Data_Mahasiswa_Magang');
-  }
-
-  function handleExportPdf() {
-    if (!filteredList || filteredList.length === 0) return;
-    const headers = ['NIM', 'Nama', 'Universitas', 'Divisi', 'Wajib APD', 'Tgl Mulai', 'Tgl Selesai', 'Status'];
-    const data = filteredList.map(m => [
-      m.nim,
-      m.nama,
-      m.universitas || '-',
-      m.divisi || '-',
-      m.wajib_apd ? 'Ya' : 'Tidak',
-      m.tgl_mulai || '-',
-      m.tgl_selesai || '-',
-      m.status.toUpperCase()
-    ]);
-    exportToPdf('Laporan Akhir Data Mahasiswa Magang & Wajib APD', headers, data, 'Laporan_Data_Mahasiswa_Magang');
+  async function handleDeleteAllConfirm() {
+    try {
+      setDeleteAllLoading(true);
+      await deleteAllMahasiswa();
+      setIsDeletingAll(false);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Gagal mengosongkan data.');
+    } finally {
+      setDeleteAllLoading(false);
+    }
   }
 
   return (
@@ -142,8 +133,7 @@ export default function DataMahasiswa() {
             options={[
               { value: '', label: 'Semua Status' },
               { value: 'aktif', label: 'Aktif' },
-              { value: 'selesai', label: 'Selesai' },
-              { value: 'nonaktif', label: 'Nonaktif' }
+              { value: 'selesai', label: 'Selesai' }
             ]}
             placeholder="Semua Status"
             style={{ width: 160 }}
@@ -164,13 +154,9 @@ export default function DataMahasiswa() {
           />
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-excel" onClick={handleExportExcel} disabled={!filteredList || filteredList.length === 0}>
-            <FileSpreadsheet size={18} />
-            Ekspor Excel
-          </button>
-          <button className="btn-pdf" onClick={handleExportPdf} disabled={!filteredList || filteredList.length === 0}>
-            <FileText size={18} />
-            Ekspor PDF
+          <button className="btn btn-danger" onClick={() => setIsDeletingAll(true)} disabled={!list || list.length === 0}>
+            <Trash2 size={18} />
+            Kosongkan Data
           </button>
           <Link to="/hc/import-mahasiswa" className="btn btn-accent">+ Import Data Mahasiswa</Link>
         </div>
@@ -205,8 +191,7 @@ export default function DataMahasiswa() {
                         onChange={(val) => handleUbahStatus(m.id, val)}
                         options={[
                           { value: 'aktif', label: 'Aktif' },
-                          { value: 'selesai', label: 'Selesai' },
-                          { value: 'nonaktif', label: 'Nonaktif' }
+                          { value: 'selesai', label: 'Selesai' }
                         ]}
                         placeholder="Status"
                         style={{ minWidth: 120 }}
@@ -288,7 +273,22 @@ export default function DataMahasiswa() {
               </div>
               <div>
                 <label className="label">Divisi</label>
-                <input type="text" className="input" value={editData.divisi || ''} onChange={e => setEditData({...editData, divisi: e.target.value})} />
+                <CustomSelect
+                  value={editData.divisi_id || ''}
+                  onChange={(val) => {
+                    const selected = divisiList.find(d => d.id === val);
+                    setEditData({
+                      ...editData,
+                      divisi_id: val || null,
+                      wajib_apd: selected ? selected.wajib_apd : editData.wajib_apd
+                    });
+                  }}
+                  options={[
+                    { value: '', label: '— Tidak Ada Divisi —' },
+                    ...divisiList.map(d => ({ value: d.id, label: d.nama_divisi }))
+                  ]}
+                  placeholder="Pilih Divisi"
+                />
               </div>
               <div>
                 <label className="label">Wajib APD</label>
@@ -313,7 +313,6 @@ export default function DataMahasiswa() {
         </div>
       )}
 
-      {/* Delete Modal */}
       <ConfirmModal
         isOpen={!!deletingId}
         title="Hapus Data Mahasiswa"
@@ -323,6 +322,17 @@ export default function DataMahasiswa() {
         isLoading={deleteLoading}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeletingId(null)}
+      />
+
+      <ConfirmModal
+        isOpen={isDeletingAll}
+        title="Kosongkan Semua Data"
+        message="PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH data mahasiswa yang telah di-import? Tindakan ini tidak dapat dibatalkan."
+        confirmText="Ya, Kosongkan Data"
+        variant="danger"
+        isLoading={deleteAllLoading}
+        onConfirm={handleDeleteAllConfirm}
+        onCancel={() => setIsDeletingAll(false)}
       />
     </StaffLayout>
   );

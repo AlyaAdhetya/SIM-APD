@@ -8,8 +8,8 @@ import { apiErrorMessage } from '../../api/client';
 
 const SAMPLE_CSV =
   'no,nama,nim,universitas,tgl_mulai,tgl_akhir,tempat_pkl\n' +
-  '1,Budi Santoso,2024001,Universitas Indonesia,2026-07-01,2026-09-30,Divisi HC\n' +
-  '2,Siti Rahayu,2024002,Universitas Gadjah Mada,2026-07-01,2026-09-30,Divisi IT\n';
+  '1,Budi Santoso,2024001,Universitas Indonesia,2026-07-01,2026-09-30,IT\n' +
+  '2,Siti Rahayu,2024002,Universitas Gadjah Mada,2026-07-01,2026-09-30,Human Capital\n';
 
 const ACCEPTED_TYPES = '.csv,.xlsx,.xls,.pdf';
 
@@ -49,7 +49,7 @@ export default function ImportMahasiswa() {
   }
 
   return (
-    <StaffLayout title="Import Data Mahasiswa" subtitle="Akun mahasiswa akan dibuat otomatis (password awal = NIM)">
+    <StaffLayout title="Import Data Mahasiswa">
       <div className="card">
         <div className="card-title">Unggah File (CSV / Excel / PDF)</div>
         <p style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 6 }}>
@@ -70,8 +70,9 @@ export default function ImportMahasiswa() {
         </div>
         <p style={{ fontSize: 12, color: 'var(--gray-400, #9ca3af)', marginBottom: 14 }}>
           Baris pertama dianggap sebagai header dan akan dilewati. Format tanggal: <code>YYYY-MM-DD</code>.
-          Kolom <code>tempat_pkl</code> digunakan untuk menentukan status wajib APD secara otomatis.
-          Format file yang diterima: <strong>CSV</strong>, <strong>Excel (.xlsx/.xls)</strong>, <strong>PDF</strong> (berbasis teks).
+          Kolom <code>tempat_pkl</code> digunakan untuk menentukan status wajib APD secara otomatis —
+          isi dengan <strong>nama divisi yang sesuai</strong> (misal: <code>IT</code>, <code>Finance</code>, <code>Human Capital</code>).
+          Format file yang diterima: <strong>CSV</strong>, <strong>Excel (.xlsx/.xls)</strong>.
         </p>
 
         {error && <div className="alert alert-error">{error}</div>}
@@ -88,7 +89,7 @@ export default function ImportMahasiswa() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div 
+          <div
             className="upload-zone"
             onClick={() => fileRef.current?.click()}
             style={{
@@ -121,7 +122,7 @@ export default function ImportMahasiswa() {
               style={{ display: 'none' }}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
-            
+
             {file ? (
               <div style={{ animation: 'fadeIn 0.3s' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'var(--green-100)', color: 'var(--green-600)', marginBottom: 16 }}>

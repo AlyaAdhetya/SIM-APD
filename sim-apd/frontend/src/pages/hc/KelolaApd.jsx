@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileSpreadsheet, FileText, Plus, X } from 'lucide-react';
+import { FileSpreadsheet, FileText, Plus, X, PackagePlus, PowerOff } from 'lucide-react';
 import StaffLayout from '../../components/StaffLayout';
 import EmptyState from '../../components/EmptyState';
 import { SkeletonTable, ButtonSpinner } from '../../components/Loading';
@@ -8,6 +8,7 @@ import { listApd, createJenisApd, createStokApd, updateStokApd, nonaktifkanStokA
 import { apiErrorMessage } from '../../api/client';
 import { exportToExcel, exportToPdf } from '../../utils/exportHelper';
 
+/* ── Halaman Utama ───────────────────────────────────────── */
 export default function KelolaApd() {
   const [apdList, setApdList] = useState(null);
   const [error, setError] = useState('');
@@ -21,10 +22,14 @@ export default function KelolaApd() {
   const [savingStokFor, setSavingStokFor] = useState(null);
   
   const [confirmModal, setConfirmModal] = useState({ open: false, stokId: null, loading: false });
+  const [tambahInputs, setTambahInputs] = useState({});
 
   function load() {
     listApd()
-      .then((res) => setApdList(res.data))
+      .then((res) => {
+        const filtered = (res.data || []).filter(j => !['Rompi Reflektor', 'Sarung Tangan'].includes(j.nama_apd));
+        setApdList(filtered);
+      })
       .catch(() => setError('Gagal memuat data APD.'));
   }
   useEffect(() => { load(); }, []);
@@ -94,6 +99,20 @@ export default function KelolaApd() {
     } catch (err) {
       setError('Gagal menonaktifkan stok APD.');
       setConfirmModal(prev => ({ ...prev, loading: false }));
+    }
+  }
+
+  async function handleTambahStokInline(stokId, ukuran) {
+    const jumlah = tambahInputs[stokId];
+    if (!jumlah || Number(jumlah) <= 0) return;
+    setError('');
+    try {
+      await updateStokApd({ id: stokId, stok_tambahan: Number(jumlah) });
+      load();
+      setSuccess(`Stok ${ukuran} berhasil ditambah ${jumlah} unit.`);
+      setTambahInputs(prev => ({ ...prev, [stokId]: '' }));
+    } catch (err) {
+      setError(apiErrorMessage(err));
     }
   }
 
@@ -200,7 +219,7 @@ export default function KelolaApd() {
           <div className="table-wrap">
             <table className="data-table">
               <thead>
-                <tr><th>Ukuran</th><th>Total</th><th>Tersedia</th><th>Dipinjam</th><th>Batas Min.</th><th>Aksi</th></tr>
+                <tr><th>Ukuran</th><th>Total</th><th>Tersedia</th><th>Dipinjam</th><th>Batas Min.</th><th>Tambah Stok</th></tr>
               </thead>
               <tbody>
                 {jenis.ukuran.map((u) => (
@@ -209,6 +228,7 @@ export default function KelolaApd() {
                     <td>{u.stok_total}</td>
                     <td style={{ color: u.stok_rendah ? 'var(--red-600)' : 'inherit', fontWeight: u.stok_rendah ? 700 : 400 }}>
                       {u.stok_tersedia}
+                      {u.stok_rendah && <span className="badge-stok-rendah">⚠ Rendah</span>}
                     </td>
                     <td>{u.stok_dipinjam}</td>
                     <td>
@@ -221,7 +241,33 @@ export default function KelolaApd() {
                       />
                     </td>
                     <td>
-                      <button className="btn btn-sm btn-outline" onClick={() => handleNonaktifkanClick(u.apd_stok_id)}>Nonaktifkan</button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          className="input"
+                          style={{ width: '80px', padding: '6px 8px', borderRadius: '9999px', textAlign: 'center' }}
+                          placeholder="0"
+                          min="0"
+                          value={tambahInputs[u.apd_stok_id] || ''}
+                          onChange={(e) => setTambahInputs(prev => ({ ...prev, [u.apd_stok_id]: e.target.value }))}
+                        />
+                        <button
+                          className="btn btn-sm btn-primary"
+                          style={{ padding: '6px 12px', borderRadius: '12px' }}
+                          disabled={!tambahInputs[u.apd_stok_id] || Number(tambahInputs[u.apd_stok_id]) <= 0}
+                          onClick={() => handleTambahStokInline(u.apd_stok_id, u.ukuran)}
+                        >
+                          Simpan
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline"
+                          style={{ padding: '6px 8px', borderRadius: '12px', color: 'var(--red-600)', borderColor: 'rgba(220,38,38,0.2)' }}
+                          title="Nonaktifkan Ukuran APD"
+                          onClick={() => handleNonaktifkanClick(u.apd_stok_id)}
+                        >
+                          <PowerOff size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

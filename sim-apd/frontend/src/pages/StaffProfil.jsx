@@ -153,7 +153,7 @@ export default function StaffProfil() {
                   </div>
                 )}
                 <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--slate-800)' }}>{user?.nama}</div>
-                <div style={{ fontSize: 13, color: 'var(--slate-500)', marginTop: 2 }}>{role === 'hsse' ? 'Staff HSSE' : 'Staff HC'}</div>
+                <div style={{ fontSize: 13, color: 'var(--slate-500)', marginTop: 2 }}>Staff HC</div>
               </div>
               
               <Row label="Nama Lengkap" value={user?.nama} />

@@ -17,13 +17,9 @@ export default function Login() {
   const { user, userType, role, login: authLogin } = useAuth();
   const navigate = useNavigate();
 
-  // Jika sudah login, redirect
   if (user) {
     if (userType === 'staff') {
-      if (role === 'hsse') return <Navigate to="/hsse" replace />;
-      return <Navigate to="/hc" replace />;
-    } else {
-      return <Navigate to="/m" replace />;
+      if (role === 'hc') return <Navigate to="/hc" replace />;
     }
   }
 
@@ -33,7 +29,7 @@ export default function Login() {
     
     if (!identifier || !password) {
       setToastType('error');
-      setError('Harap isi Username/NIM dan Password.');
+      setError('Harap isi Username dan Password.');
       return;
     }
 
@@ -42,31 +38,14 @@ export default function Login() {
       const response = await login(identifier, password);
       const payload = response.data; // Server wraps data inside 'data' property
 
-      // Mahasiswa yang tidak wajib APD — tidak mendapat token
-      if (payload.wajib_apd === false) {
-        setToastType('warning');
-        setError(`Halo ${payload.nama} (${payload.divisi}), akun Anda tidak memerlukan APD sehingga tidak dapat masuk ke sistem ini.`);
-        setLoading(false);
-        return;
-      }
-
       authLogin({
         user: payload.user,
         token: payload.token,
         user_type: payload.user_type,
-        role: payload.user.role || 'mahasiswa'
+        role: payload.user.role
       });
       
-      // Redirect berdasarkan role
-      if (payload.user_type === 'staff') {
-        if (payload.user.role === 'hsse') {
-          navigate('/hsse', { replace: true });
-        } else {
-          navigate('/hc', { replace: true });
-        }
-      } else {
-        navigate('/m', { replace: true });
-      }
+      navigate('/hc', { replace: true });
     } catch (err) {
       setToastType('error');
       setError(apiErrorMessage(err, 'Gagal masuk. Periksa kembali data Anda.'));
@@ -85,7 +64,7 @@ export default function Login() {
 
         <form className="login-form" onSubmit={handleSubmit}>
           <input 
-            placeholder="Username atau NIM" 
+            placeholder="Username" 
             className="input" 
             type="text" 
             value={identifier}
@@ -100,14 +79,14 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <span className="forgot-password"><a href="#">Lupa Password?</a></span>
           
+
           <button className="login-button" type="submit" disabled={loading}>
             {loading ? <ButtonSpinner /> : 'Masuk ke Sistem'}
           </button>
         </form>
 
-        <span className="agreement">Terkendala akses? Hubungi tim HC / HSSE.</span>
+        <span className="agreement">Terkendala akses? Hubungi tim IT / HC.</span>
       </div>
     </div>
   );

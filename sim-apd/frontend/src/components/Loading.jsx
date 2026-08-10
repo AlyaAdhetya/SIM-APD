@@ -180,17 +180,15 @@ export function LoadingPage({ label = 'Memuat data...' }) {
   );
 }
 
-export function ButtonSpinner() {
+export function ButtonSpinner({ color = 'currentColor', size = 20 }) {
+  const dim = `${size}px`;
+  const circleDim = `${size * 0.4}px`;
   return (
-    <div className="dot-spinner">
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
+    <div className="loader-new" style={{ '--dim': dim }}>
+      <div className="circle" style={{ '--color': color, '--dim': circleDim }}></div>
+      <div className="circle" style={{ '--color': color, '--dim': circleDim }}></div>
+      <div className="circle" style={{ '--color': color, '--dim': circleDim }}></div>
+      <div className="circle" style={{ '--color': color, '--dim': circleDim }}></div>
     </div>
   );
 }

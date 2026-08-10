@@ -23,11 +23,11 @@ export default function VerifikasiPeminjaman() {
   }, []);
 
   return (
-    <StaffLayout title="Verifikasi Peminjaman" subtitle="Daftar pengajuan yang menunggu persetujuan">
+    <StaffLayout title="Pengambilan APD" subtitle="Daftar pengajuan yang belum diambil">
       {error && <div className="alert alert-error">{error}</div>}
       {!list && !error && <LoadingPage />}
       {list && list.length === 0 && (
-        <EmptyState icon={<CheckCircle2 size={40} strokeWidth={1.5} color="#16a34a" />} title="Tidak ada pengajuan yang menunggu verifikasi" />
+        <EmptyState icon={<CheckCircle2 size={40} strokeWidth={1.5} color="#16a34a" />} title="Tidak ada pengajuan yang belum diambil" />
       )}
       {list?.map((p) => (
         <div className="card" key={p.id}>
@@ -42,7 +42,7 @@ export default function VerifikasiPeminjaman() {
               </p>
             </div>
             <Link to={`/hc/verifikasi-peminjaman/${p.id}`} className="btn btn-primary btn-sm">
-              Lihat &amp; Verifikasi
+              Konfirmasi Pengambilan
             </Link>
           </div>
         </div>
