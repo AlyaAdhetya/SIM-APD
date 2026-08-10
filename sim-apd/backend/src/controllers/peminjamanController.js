@@ -270,12 +270,8 @@ const sendReminderPeminjaman = async (req, res) => {
   } catch (error) {
     console.error('sendReminder error code:', error.code);
     console.error('sendReminder error message:', error.message);
-    const detail = error.code === 'EAUTH'
-      ? 'Kredensial Gmail salah atau App Password tidak valid.'
-      : error.code === 'ETIMEDOUT' || error.code === 'ECONNECTION'
-      ? 'Koneksi ke server Gmail gagal (timeout).'
-      : error.message || 'Terjadi kesalahan pada server.';
-    return jsonError(res, detail, 500);
+    console.error('sendReminder full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    return jsonError(res, `[DEBUG] code=${error.code || 'N/A'} | ${error.message || 'Terjadi kesalahan pada server.'}`, 500);
   }
 };
 
