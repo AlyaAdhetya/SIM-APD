@@ -168,25 +168,71 @@ const submitForm = async (req, res) => {
 
     await connection.commit();
 
+    // Ambil detail APD yang dipinjam untuk email
+    const [apdDetailRows] = await db.query(`
+      SELECT j.nama_apd, s.ukuran
+      FROM peminjaman_detail pd
+      JOIN apd_stok s ON pd.apd_stok_id = s.id
+      JOIN apd_jenis j ON s.apd_jenis_id = j.id
+      WHERE pd.peminjaman_id = ?
+      ORDER BY j.nama_apd ASC
+    `, [pjmId]);
+
     // Kirim Email Pemberitahuan
     try {
       if (process.env.SMTP_EMAIL && process.env.SMTP_PASS) {
+        // Buat baris tabel HTML untuk setiap APD
+        const apdTableRows = apdDetailRows.map((apd, idx) => `
+          <tr style="background-color: ${idx % 2 === 0 ? '#f8fafc' : '#ffffff'};">
+            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">${idx + 1}</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${apd.nama_apd}</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">${apd.ukuran}</td>
+          </tr>
+        `).join('');
+
         const mailOptions = {
           from: `"SIM APD RU III" <${process.env.SMTP_EMAIL}>`,
           to: email,
-          subject: 'Bukti Pengajuan Peminjaman APD',
+          subject: `[${kodeReferensi}] Bukti Pengajuan Peminjaman APD`,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-              <h2 style="color: #16a34a; text-align: center;">Pengajuan Berhasil</h2>
-              <p>Halo <strong>${mhs.nama}</strong>,</p>
-              <p>Terima kasih, form pengajuan peminjaman APD Anda telah berhasil direkam dalam sistem.</p>
-              <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0;">
-                <p style="margin: 0; color: #64748b; font-size: 14px;">KODE REFERENSI</p>
-                <h3 style="margin: 8px 0 0; color: #0f172a; font-size: 24px;">${kodeReferensi}</h3>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+              
+              <div style="background-color: #0f172a; padding: 24px; text-align: center;">
+                <h2 style="color: #ffffff; margin: 0 0 4px;">✅ Pengajuan APD Berhasil</h2>
+                <p style="color: #94a3b8; margin: 0; font-size: 14px;">Sistem Informasi Manajemen APD - PT Pertamina RU III</p>
               </div>
-              <p>Silakan tunjukkan kode referensi ini kepada staff HC untuk proses pengambilan APD Anda.</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-              <p style="font-size: 12px; color: #94a3b8; text-align: center;">Email ini dikirim secara otomatis oleh Sistem Informasi Manajemen APD - PT Pertamina RU III.</p>
+
+              <div style="padding: 24px;">
+                <p style="margin: 0 0 16px;">Halo <strong>${mhs.nama}</strong>,</p>
+                <p style="margin: 0 0 20px; color: #475569;">Pengajuan peminjaman APD Anda telah berhasil direkam. Berikut adalah ringkasan pengajuan Anda:</p>
+
+                <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 16px 20px; margin-bottom: 24px; text-align: center;">
+                  <p style="margin: 0 0 4px; color: #3b82f6; font-size: 13px; letter-spacing: 1px; font-weight: 600;">KODE REFERENSI</p>
+                  <p style="margin: 0; color: #1d4ed8; font-size: 28px; font-weight: 800; letter-spacing: 2px;">${kodeReferensi}</p>
+                </div>
+
+                <p style="margin: 0 0 12px; font-weight: 600; color: #1e293b;">Daftar APD yang Dipinjam:</p>
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; font-size: 14px;">
+                  <thead>
+                    <tr style="background-color: #1e293b;">
+                      <th style="padding: 10px 14px; text-align: left; color: #ffffff; font-weight: 600; width: 40px;">No</th>
+                      <th style="padding: 10px 14px; text-align: left; color: #ffffff; font-weight: 600;">Jenis APD</th>
+                      <th style="padding: 10px 14px; text-align: left; color: #ffffff; font-weight: 600;">Ukuran</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${apdTableRows}
+                  </tbody>
+                </table>
+
+                <div style="margin-top: 24px; padding: 14px 16px; background-color: #fefce8; border: 1px solid #fde047; border-radius: 6px; font-size: 14px; color: #713f12;">
+                  ⚠️ Silakan tunjukkan <strong>kode referensi</strong> di atas kepada staff HC untuk proses pengambilan APD Anda.
+                </div>
+              </div>
+
+              <div style="padding: 16px; background-color: #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8;">
+                Email ini dikirim secara otomatis oleh Sistem Informasi Manajemen APD - PT Pertamina RU III.<br>Harap tidak membalas email ini.
+              </div>
             </div>
           `
         };
