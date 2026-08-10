@@ -185,14 +185,6 @@ const finishPeminjaman = async (req, res) => {
 
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASS
-  }
-});
-
 // POST /api/peminjaman/send-reminder/:id
 const sendReminderPeminjaman = async (req, res) => {
   try {
@@ -264,11 +256,26 @@ const sendReminderPeminjaman = async (req, res) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    // Buat transporter di dalam fungsi agar env var dibaca saat request (penting di Vercel serverless)
+    const reminderTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASS
+      }
+    });
+
+    await reminderTransporter.sendMail(mailOptions);
     return jsonSuccess(res, null, 'Email pengingat berhasil dikirim.');
   } catch (error) {
-    console.error(error);
-    return jsonError(res, 'Terjadi kesalahan pada server saat mengirim email.', 500);
+    console.error('sendReminder error code:', error.code);
+    console.error('sendReminder error message:', error.message);
+    const detail = error.code === 'EAUTH'
+      ? 'Kredensial Gmail salah atau App Password tidak valid.'
+      : error.code === 'ETIMEDOUT' || error.code === 'ECONNECTION'
+      ? 'Koneksi ke server Gmail gagal (timeout).'
+      : error.message || 'Terjadi kesalahan pada server.';
+    return jsonError(res, detail, 500);
   }
 };
 

@@ -3,7 +3,8 @@ const { jsonSuccess, jsonError } = require('../helpers/response');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
+// Buat transporter secara lazy di dalam fungsi agar env var terbaca saat request
+const createTransporter = () => nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.SMTP_EMAIL,
@@ -236,7 +237,7 @@ const submitForm = async (req, res) => {
             </div>
           `
         };
-        await transporter.sendMail(mailOptions);
+        await createTransporter().sendMail(mailOptions);
         console.log(`Email bukti peminjaman berhasil dikirim ke ${email}`);
       } else {
         console.warn('Konfigurasi SMTP_EMAIL atau SMTP_PASS belum diatur di env. Email bukti peminjaman tidak dikirim.');
